@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>口播智能体 - AI数字人口播视频生成平台</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --primary: #7c3aed;
+  --primary-light: #a78bfa;
+  --primary-dark: #5b21b6;
+  --accent: #f59e0b;
+  --bg-dark: #0f0f1a;
+  --bg-card: #1a1a2e;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --border-color: #2d2d44;
+  --success: #10b981;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-dark); color: var(--text-primary); }
+.glass { background: rgba(26,26,46,0.8); backdrop-filter: blur(20px); }
+.glass-card { background: linear-gradient(135deg, rgba(26,26,46,0.9), rgba(30,30,55,0.7)); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; transition: all 0.3s ease; }
+.glass-card:hover { border-color: rgba(124,58,237,0.3); box-shadow: 0 8px 32px rgba(124,58,237,0.1); }
+.step-dot { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; border: 2px solid var(--border-color); background: var(--bg-card); color: var(--text-secondary); cursor: pointer; transition: all 0.3s; flex-shrink: 0; }
+.step-dot.active { background: var(--primary); border-color: var(--primary); color: white; box-shadow: 0 0 20px rgba(124,58,237,0.4); }
+.step-dot.done { background: var(--success); border-color: var(--success); color: white; }
+.step-line { flex: 1; height: 2px; background: var(--border-color); margin: 0 8px; }
+.step-line .fill { height: 100%; background: linear-gradient(90deg, var(--success), var(--primary)); transition: width 0.6s; width: 0%; }
+.step-line.done .fill { width: 100%; }
+.btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; border: none; padding: 10px 24px; border-radius: 12px; font-weight: 500; cursor: pointer; font-size: 14px; }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(124,58,237,0.3); }
+.btn-secondary { background: rgba(124,58,237,0.1); color: var(--primary-light); border: 1px solid rgba(124,58,237,0.3); padding: 10px 24px; border-radius: 12px; font-weight: 500; cursor: pointer; font-size: 14px; }
+.btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border-color); padding: 10px 24px; border-radius: 12px; font-weight: 500; cursor: pointer; font-size: 14px; }
+.input-field { background: rgba(15,15,26,0.6); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 16px; color: var(--text-primary); width: 100%; outline: none; font-size: 14px; }
+.input-field:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(124,58,237,0.15); }
+.select-styled { background: rgba(15,15,26,0.6); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 16px; color: var(--text-primary); width: 100%; cursor: pointer; font-size: 14px; outline: none; }
+.panel { display: none; }
+.panel.active { display: block; animation: fadeIn 0.3s; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-spinner { width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.2); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; display: inline-block; }
+.avatar-card { cursor: pointer; border-radius: 16px; border: 2px solid var(--border-color); padding: 16px; text-align: center; transition: all 0.3s; background: var(--bg-card); }
+.avatar-card:hover { border-color: var(--primary-light); transform: translateY(-2px); }
+.avatar-card.selected { border-color: var(--primary); background: rgba(124,58,237,0.1); }
+.avatar-img { width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 8px; background: linear-gradient(135deg, var(--primary), var(--accent)); display: flex; align-items: center; justify-content: center; font-size: 28px; }
+.toast { position: fixed; bottom: 30px; right: 30px; padding: 16px 24px; border-radius: 12px; color: white; font-weight: 500; z-index: 9999; transform: translateY(100px); opacity: 0; transition: all 0.4s; max-width: 400px; }
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { background: linear-gradient(135deg, #059669, #10b981); }
+.toast.error { background: linear-gradient(135deg, #dc2626, #ef4444); }
+.toast.info { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); }
+.tag { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; background: rgba(124,58,237,0.1); color: var(--primary-light); border: 1px solid rgba(124,58,237,0.2); }
+.slider-input { -webkit-appearance: none; width: 100%; height: 4px; border-radius: 2px; background: var(--border-color); outline: none; }
+.slider-input::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--primary); cursor: pointer; }
+.file-upload { border: 2px dashed var(--border-color); border-radius: 16px; padding: 40px 20px; text-align: center; cursor: pointer; }
+.file-upload:hover { border-color: var(--primary-light); background: rgba(124,58,237,0.05); }
+.hidden { display: none !important; }
+</style>
+</head>
+<body style="background:#0f0f1a;color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;">
+<div id="toast" class="toast"></div>
+
+<div class="fixed left-0 top-0 h-full w-64" style="background:rgba(26,26,46,0.8);border-right:1px solid var(--border-color);z-index:50;display:flex;flex-direction:column;">
+  <div class="p-6" style="border-bottom:1px solid var(--border-color);">
+    <div class="flex items-center gap-3">
+      <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#7c3aed,#f59e0b);display:flex;align-items:center;justify-content:center;font-size:18px;">🎙️</div>
+      <div><div style="font-weight:700;font-size:16px;">口播智能体</div><div style="font-size:12px;color:#94a3b8;">AI数字人视频工厂</div></div>
+    </div>
+  </div>
+  <div style="flex:1;padding:16px;overflow-y:auto;">
+    <button class="nav-btn" data-step="0" style="display:flex;align-items:center;gap:12px;width:100%;padding:12px 16px;border-radius:12px;font-size:14px;font-weight:500;border:none;cursor:pointer;background:rgba(124,58,237,0.15);color:#a78bfa;margin-bottom:4px;">📋 项目总览</button>
+    <button class="nav-btn" data-step="1" style="display:flex;align-items:center;gap:12px;width:100%;padding:12px 16px;border-radius:12px;font-size:14px;font-weight:500;border:none;cursor:pointer;background:transparent;color:#94a3b8;margin-bottom:4px;">📝 文案管理</button>
+    <button class="nav-btn" data-step="2" style="display:flex;align-items:center;gap:12px;width:100%;padding:12px 16px;border-radius:12px;font-size:14px;font-weight:500;border:none;cursor:pointer;background:transparent;color:#94a3b8;margin-bottom:4px;">🎤 配音生成</button>
+    <button class="nav-btn" data-step="3" style="display:flex;align-items:center;gap:12px;width:100%;padding:12px 16px;border-radius:12px;font-size:14px;font-weight:500;border:none;cursor:pointer;background:transparent;color:#94a3b8;margin-bottom:4px;">👤 数字人选择</button>
+    <button class="nav-btn" data-step="4" style="display:flex;align-items:center;gap:12px;width:100%;padding:12px 16px;border-radius:12px;font-size:14px;font-weight:500;border:none;cursor:pointer;background:transparent;color:#94a3b8;margin-bottom:4px;">🎬 视频生成</button>
+    <button class="nav-btn" data-step="5" style="display:flex;align-items:center;gap:12px;width:100%;padding:12px 16px;border-radius:12px;font-size:14px;font-weight:500;border:none;cursor:pointer;background:transparent;color:#94a3b8;margin-bottom:4px;">✂️ 后期编辑</button>
+    <button class="nav-btn" data-step="6" style="display:flex;align-items:center;gap:12px;width:100%;padding:12px 16px;border-radius:12px;font-size:14px;font-weight:500;border:none;cursor:pointer;background:transparent;color:#94a3b8;">🚀 一键发布</button>
+  </div>
+  <div class="p-4" style="border-top:1px solid var(--border-color);">
+    <div style="display:flex;align-items:center;gap:12px;font-size:14px;color:#94a3b8;">
+      <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;font-size:12px;">✓</div>
+      <span>系统就绪</span>
+    </div>
+  </div>
+</div>
+<div style="margin-left:256px;padding:24px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;">
+    <div>
+      <h1 style="font-size:24px;font-weight:700;background:linear-gradient(135deg,#a78bfa,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">口播数字人智能体</h1>
+      <p style="font-size:14px;margin-top:4px;color:#94a3b8;">AI驱动的口播视频全自动生产线 — 从文案到发布，一站式完成</p>
+    </div>
+    <div style="display:flex;gap:12px;">
+      <button onclick="showToast('已保存项目','success')" style="background:transparent;color:#94a3b8;border:1px solid #2d2d44;padding:10px 24px;border-radius:12px;font-weight:500;cursor:pointer;font-size:14px;">💾 保存项目</button>
+      <button onclick="startPipeline()" style="background:linear-gradient(135deg,#7c3aed,#5b21b6);color:white;border:none;padding:10px 24px;border-radius:12px;font-weight:500;cursor:pointer;font-size:14px;">▶ 开始全流程</button>
+    </div>
+  </div>
+  <div style="background:linear-gradient(135deg,rgba(26,26,46,0.9),rgba(30,30,55,0.7));border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:24px;margin-bottom:32px;">
+    <div style="display:flex;align-items:center;" id="stepProgress">
+      <div class="step-dot active" data-step="0" style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;border:2px solid #7c3aed;background:#7c3aed;color:white;cursor:pointer;flex-shrink:0;box-shadow:0 0 20px rgba(124,58,237,0.4);">📋</div>
+      <div class="step-line" style="flex:1;height:2px;background:#2d2d44;margin:0 8px;" id="stepLine0"><div class="fill" style="height:100%;background:linear-gradient(90deg,#10b981,#7c3aed);transition:width 0.6s;width:0%;"></div></div>
+      <div class="step-dot" data-step="1" style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;border:2px solid #2d2d44;background:#1a1a2e;color:#94a3b8;cursor:pointer;flex-shrink:0;" id="stepDot1">📝</div>
+      <div class="step-line" style="flex:1;height:2px;background:#2d2d44;margin:0 8px;" id="stepLine1"><div class="fill" style="height:100%;background:linear-gradient(90deg,#10b981,#7c3aed);transition:width 0.6s;width:0%;"></div></div>
+      <div class="step-dot" data-step="2" style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;border:2px solid #2d2d44;background:#1a1a2e;color:#94a3b8;cursor:pointer;flex-shrink:0;" id="stepDot2">🎤</div>
+      <div class="step-line" style="flex:1;height:2px;background:#2d2d44;margin:0 8px;" id="stepLine2"><div class="fill" style="height:100%;background:linear-gradient(90deg,#10b981,#7c3aed);transition:width 0.6s;width:0%;"></div></div>
+      <div class="step-dot" data-step="3" style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;border:2px solid #2d2d44;background:#1a1a2e;color:#94a3b8;cursor:pointer;flex-shrink:0;" id="stepDot3">👤</div>
+      <div class="step-line" style="flex:1;height:2px;background:#2d2d44;margin:0 8px;" id="stepLine3"><div class="fill" style="height:100%;background:linear-gradient(90deg,#10b981,#7c3aed);transition:width 0.6s;width:0%;"></div></div>
+      <div class="step-dot" data-step="4" style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;border:2px solid #2d2d44;background:#1a1a2e;color:#94a3b8;cursor:pointer;flex-shrink:0;" id="stepDot4">🎬</div>
+      <div class="step-line" style="flex:1;height:2px;background:#2d2d44;margin:0 8px;" id="stepLine4"><div class="fill" style="height:100%;background:linear-gradient(90deg,#10b981,#7c3aed);transition:width 0.6s;width:0%;"></div></div>
+      <div class="step-dot" data-step="5" style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;border:2px solid #2d2d44;background:#1a1a2e;color:#94a3b8;cursor:pointer;flex-shrink:0;" id="stepDot5">✂️</div>
+      <div class="step-line" style="flex:1;height:2px;background:#2d2d44;margin:0 8px;" id="stepLine5"><div class="fill" style="height:100%;background:linear-gradient(90deg,#10b981,#7c3aed);transition:width 0.6s;width:0%;"></div></div>
+      <div class="step-dot" data-step="6" style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;border:2px solid #2d2d44;background:#1a1a2e;color:#94a3b8;cursor:pointer;flex-shrink:0;" id="stepDot6">🚀</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:12px;font-size:12px;color:#94a3b8;"><span>总览</span><span>文案</span><span>配音</span><span>数字人</span><span>视频</span><span>编辑</span><span>发布</span></div>
+  </div>
+
+  <!-- Panel 0: Overview -->
+  <div class="panel active" id="panel0">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;margin-bottom:24px;">
+      <div class="glass-card" style="padding:24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;"><div style="font-size:14px;font-weight:500;color:#94a3b8;">当前项目</div><span style="font-size:24px;">📋</span></div>
+        <div style="font-size:18px;font-weight:700;">未命名项目</div>
+        <div style="font-size:14px;margin-top:4px;color:#94a3b8;">点击右侧开始创作</div>
+      </div>
+      <div class="glass-card" style="padding:24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;"><div style="font-size:14px;font-weight:500;color:#94a3b8;">处理进度</div><span style="font-size:24px;">📊</span></div>
+        <div style="display:flex;align-items:center;gap:16px;">
+          <div style="display:flex;align-items:center;justify-content:center;">
+            <div style="width:100px;height:100px;border-radius:50%;border:4px solid #2d2d44;display:flex;align-items:center;justify-content:center;flex-direction:column;">
+              <span style="font-size:24px;font-weight:700;" id="progressPercent">0%</span>
+              <span style="font-size:12px;color:#94a3b8;">完成</span>
+            </div>
+          </div>
+          <div style="flex:1;font-size:14px;color:#94a3b8;">
+            <div style="display:flex;justify-content:space-between;"><span>文案</span><span id="s1">⏳ 待处理</span></div>
+            <div style="display:flex;justify-content:space-between;margin-top:8px;"><span>配音</span><span id="s2">⏳ 待处理</span></div>
+            <div style="display:flex;justify-content:space-between;margin-top:8px;"><span>数字人</span><span id="s3">⏳ 待处理</span></div>
+            <div style="display:flex;justify-content:space-between;margin-top:8px;"><span>视频</span><span id="s4">⏳ 待处理</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="glass-card" style="padding:24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;"><div style="font-size:14px;font-weight:500;color:#94a3b8;">快捷操作</div><span style="font-size:24px;">⚡</span></div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <button onclick="goToStep(1)" style="background:linear-gradient(135deg,#7c3aed,#5b21b6);color:white;border:none;padding:10px;border-radius:12px;font-weight:500;cursor:pointer;font-size:14px;width:100%;">📝 开始写文案</button>
+          <button onclick="extractScript()" style="background:rgba(124,58,237,0.1);color:#a78bfa;border:1px solid rgba(124,58,237,0.3);padding:10px;border-radius:12px;font-weight:500;cursor:pointer;font-size:14px;width:100%;">📋 从链接提取文案</button>
+          <button onclick="showToast('打开历史项目','info')" style="background:transparent;color:#94a3b8;border:1px solid #2d2d44;padding:10px;border-radius:12px;font-weight:500;cursor:pointer;font-size:14px;width:100%;">📂 历史项目</button>
+        </div>
+      </div>
+    </div>
+    <div class="glass-card" style="padding:24px;">
+      <h3 style="font-weight:700;margin-bottom:16px;">💡 使用指南</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;">
+        <div style="padding:16px;border-radius:12px;background:rgba(124,58,237,0.05);border:1px solid rgba(124,58,237,0.1);"><div style="font-size:20px;margin-bottom:8px;">1️⃣</div><div style="font-weight:500;font-size:14px;margin-bottom:4px;">文案管理</div><div style="font-size:12px;color:#94a3b8;">输入或粘贴你的口播文案，AI一键优化改写</div></div>
+        <div style="padding:16px;border-radius:12px;background:rgba(245,158,11,0.05);border:1px solid rgba(245,158,11,0.1);"><div style="font-size:20px;margin-bottom:8px;">2️⃣</div><div style="font-weight:500;font-size:14px;margin-bottom:4px;">数字人生成</div><div style="font-size:12px;color:#94a3b8;">选择数字人形象，上传参考视频，生成口播视频</div></div>
+        <div style="padding:16px;border-radius:12px;background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.1);"><div style="font-size:20px;margin-bottom:8px;">3️⃣</div><div style="font-weight:500;font-size:14px;margin-bottom:4px;">一键发布</div><div style="font-size:12px;color:#94a3b8;">自动加字幕、配乐、生成封面，发布到各大平台</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel 1: Script -->
+  <div class="panel" id="panel1">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+      <div class="glass-card" style="padding:24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <h3 style="font-weight:700;">📝 原始文案</h3>
+          <div style="display:flex;gap:8px;">
+            <button onclick="extractScript()" style="background:rgba(124,58,237,0.1);color:#a78bfa;border:1px solid rgba(124,58,237,0.3);padding:6px 12px;border-radius:10px;font-size:12px;font-weight:500;cursor:pointer;">从链接提取</button>
+            <button onclick="clearScript()" style="background:transparent;color:#94a3b8;border:1px solid #2d2d44;padding:6px 12px;border-radius:10px;font-size:12px;font-weight:500;cursor:pointer;">清空</button>
+          </div>
+        </div>
+        <textarea id="scriptInput" style="background:rgba(15,15,26,0.6);border:1px solid #2d2d44;border-radius:12px;padding:12px 16px;color:#f1f5f9;width:100%;outline:none;font-size:14px;min-height:300px;resize:vertical;" placeholder="在此粘贴你的口播文案，或点击「从链接提取」从抖音等平台自动提取文案..."></textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">
+          <div style="font-size:12px;color:#94a3b8;"><span id="charCount">0</span> 字</div>
+          <button onclick="rewriteScript()" style="background:linear-gradient(135deg,#7c3aed,#5b21b6);color:white;border:none;padding:10px 24px;border-radius:12px;font-weight:500;cursor:pointer;font-size:14px;display:flex;align-items:center;gap:8px;">✨ AI智能改写</button>
+        </div>
+      </div>
+      <div class="glass-card" style="padding:24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <h3 style="font-weight:700;">📄 改写后文案</h3>
+          <div style="display:flex;gap:8px;">
+            <button onclick="clearRewrite()" style="background:transparent;color:#94a3b8;border:1px solid #2d2d44;padding:6px 12px;border-radius:10px;font-size:12px;font-weight:500;cursor:pointer;">清空</button>
+            <button onclick="copyScript()" style="background:rgba(124,58,237,0.1);color:#a78bfa;border:1px solid rgba(124,58,237,0.3);padding:6px 12px;border-radius:10px;font-size:12px;font-weight:500;cursor:pointer;">📋 复制</button>
+          </div>
+        </div>
+        <textarea id="rewrittenOutput" style="background:rgba(15,15,26,0.6);border:1px solid #2d2d44;border-radius:12px;padding:12px 16px;color:#f1f5f9;width:100%;outline:none;font-size:14px;min-height:300px;resize:vertical;" readonly placeholder="点击「AI智能改写」按钮，AI将为你优化文案..."></textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">
+          <select id="rewriteStyle" style="background:rgba(15,15,26,0.6);border:1px solid #2d2d44;border-radius:10px;padding:8px 12px;color:#f1f5f9;cursor:pointer;font-size:14px;outline:none;width:auto;">
+            <option value="general">通用优化</option>
+            <option value="viral">爆款风格</option>
+            <option value="professional">专业风格</option>
+            <option value="warm">温暖亲切</option>
+          </select>
+          <button onclick="confirmScript()" style="background:linear-gradient(135deg,#7c3aed,#5b21b6);color:white;border:none;padding:10px 24px;border-radius:12px;font-weight:500;cursor:pointer;font-size:14px;display:flex;align-items:center;gap:8px;">✓ 确认文案</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel 2: Voice -->
+  <div class="panel" id="panel2">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+      <div class="glass-card" style="padding:24px;">
+        <h3 style="font-weight:700;margin-bottom:16px;">🎤 配音设置</h3>
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div><label style="font-size:14px;font-weight:500;color:#94a3b8;display:block;margin-bottom:8px;">音色选择</label>
+            <select id="voiceSelect" style="background:rgba(15,15,26,0.6);border:1px solid #2d2d44;border-radius:12px;padding:12px 16px;color:#f1f5f9;width:100%;cursor:pointer;font-size:14px;outline:none;">
+              <option value="male_warm" selected>男声 - 温暖亲切</option>
+              <option value="female_sweet">女声 - 甜美温柔</option>
+              <option value="female_professional">女声 - 专业知性</option>
+              <option value="male_energetic">男声 - 活力激情</option>
+            </select></div>
+          <div><label style="font-size:14px;font-weight:500;color:#94a3b8;display:block;margin-bottom:8px;">语速 <span id="speedValue">1.0x</span></label>
+            <input type="range" style="-webkit-appearance:none;width:100%;height:4px;border-radius:2px;background:#2d2d44;outline:none;" min="0.5" max="2.0" step="0.1" value="1.0" oninput="document.getElementById('speedValue').textContent=this.value+'x'"></div>
+          <div><label style="font-size:14px;font-weight:500;color:#94a3b8;display:block;margin-bottom:8px;">情感</label>
+            <select id="emotionSelect" style="background:rgba(15,15,26,0.6);border:1px solid #2d2d44;border-radius:12px;padding:12px 16px;color:#f1f5f9;width:100%;cursor:pointer;font-size:14px;outline:none;">
+              <option value="happy" selected>愉悦活泼</option>
+              <option value="serious">严肃认真</option>
+              <option value="excited">激情澎湃</option>
+              <option value="sincere">真诚感人</option>
+            </select></div>
+        </div>
+      </div>
+      <div class="glass-card" style="padding:24px;display:flex;flex-direction:column;">
+        <h3 style="font-weight:700;margin-bottom:16px;">🎧 配音预览</h3>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(15,15,26,0.4);border-radius:12px;padding:40px 20px;">
+          <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#f59e0b);display:flex;align-items:center;justify-content:center;font-size:36px;margin-bottom:16px;">🎤</div>
+          <div style="font-size:14px;font-weight:500;margin-bottom:8px;">点击下方按钮生成配音</div>
+          <div style="font-size:12px;margin-bottom:16px;color:#94a3b8;">约需 5-15 秒，取决于文案长度</div>
+          <button onclick="generateVoice()" style="background:linear-gradient(135deg,#7c3aed,#5b21b6);color:white;border:none;padding:10px 24px;border-radius:12px;font-weight:500;cursor:pointer;font-size:14px;display:flex;align-items:center;gap:8px;">🔊 生成配音</button>
+          <div id="voiceLoading" style="display:none;margin-top:16px;display:flex;align-items:center;gap:8px;color:#a78bfa;"><span class="loading-spinner"></span> 生成中...</div>
+          <div id="voiceResult" style="display:none;margin-top:16px;width:100%;">
+            <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);">
+              <span>🔊</span><div style="flex:1;"><div style="font-size:14px;font-weight:500;">配音已就绪</div><div style="font-size:12px;color:#94a3b8;">00:32 · 男声温暖</div></div>
+              <button onclick="showToast('播放配音','info')" style="background:rgba(124,58,237,0.1);color:#a78bfa;border:1px solid rgba(124,58,237,0.3);padding:4px 12px;border-radius:10px;font-size:12px;cursor:pointer;">▶ 播放</button>
+            </div>
+            <button onclick="goToStep(3)" style="background:linear-gradient(135deg,#7c3aed,#5b21b6);color:white;border:none;padding:10px;border-radius:12px;font-weight:500;cursor:pointer;font-size:14px;width:100%;margin-top:12px;">✓ 确认配音，下一步</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel 3: Avatar -->
+  <div class="panel" id="panel3">
+    <div class="glass-card" style="padding:24px;margin-bottom:24px;">
+      <h3 style="font-weight:700;margin-bottom:16px;">👤 选择数字人形象</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;">
+Init:         <div onclick="selectAvatar(this,0)" style="cursor:pointer;border-radius:16px;border:2px solid #2d2d44;padding:16px;text-align:center;transition:all 0.3s;background:#1a1a2e;border-color:#7c3aed;background:rgba(124,58,237,0.1);" class="avatar-card">
+          <div style="width:80px;height:80px;border-radius:50%;margin:0 auto 8px;background:linear-gradient(135deg,#7c3aed,#f59e0b);display:flex;align-items:center;justify-content:center;font-size:28px;">👨‍💼</div>
+          <div style="font-size:14px;font-weight:500;">商务男士</div>
+          <div style="font-size:12px;color:#94a3b8;">稳重专业</div>
+        </div>
+        <div onclick="selectAvatar(this,1)" style="cursor:pointer;border-radius:16px;border:2px solid #2d2d44;padding:16px;text-align:center;transition:all 0.3s;background:#1a1a2e;" class="avatar-card">
+          <div style="width:80px;height:80px;border-radius:50%;margin:0 auto 8px;background:linear-gradient(135deg,#7c3aed,#f59e0b);display:flex;align-items:center;justify-content:center;font-size:28px;">👩‍💼</div>
+          <div style="font-size:14px;font-weight:500;">职业女性</div>
+          <div style="font-size:12px;color:#94a3b8;">知性优雅</div>
+        </div>
+        <div onclick="selectAvatar(this,2)" style="cursor:pointer;border-radius:16px;border:2px solid #2d2d44;padding:16px;text-align:center;transition:all 0.3s;background:#1a1a2e;" class="avatar-card">
+          <div style="width:80px;height:80px;border-radius:50%;margin:0 auto 8px;background:linear-gradient(135deg,#7c3aed,#f59e0b);display:flex;align-items:center;justify-content:center;font-size:28px;">🧑‍🎤</div>
+          <div style="font-size:14px;font-weight:500;">潮流达人</div>
+          <div style="font-size:12px;color:#94a3b8;">活力时尚</div>
+        </div>
+        <div onclick="selectAvatar(this,3)" style="cursor:pointer;border-radius:16px;border:2px solid #2d2d44;padding:16px;text-align:center;transition:all 0.3s;background:#1a1a2e;" class="avatar-card">
+          <div style="width:80px;height:80px;border-radius:50%;margin:0 auto 8px;background:linear-gradient(135deg,#7c3aed,#f59e0b);display:flex;align-items:center;justify-content:center;font-size:28px;">👩‍🏫</div>
+          <div style="font-size:14px;font-weight:500;">知性讲师</div>
+          <div style="font-size:12px;color:#94a3b8;">亲切专业</div>
+        </div>
+        <div onclick="selectAvatar(this,4)" style="cursor:pointer;border-radius:16px;border:2px solid #2d2d44;padding:16px;text-align:center;transition:all 0.3s;background:#1a1a2e;" class="avatar-card">
+          <div style="width:80px;height:80px;border-radius:50%;margin:0 auto 8px;background:linear-gradient(135deg,#7c3aed,#f59e0b);display:flex;align-items:center;justify-content:center;font-size:28px;">👨‍🔬</div>
+          <div style="font-size:14px;font-weight:500;">科技博主</div>
+          <div style="font-size:12px;color:#94a3b8;">理性清晰</div>
+        </div>
+      </div>
+    </div>
+    <div class="glass-card" style="padding:24px;">
+      <h3 style="font-weight:700;margin-bottom:16px;">📹 上传参考视频（可选）</h3>
+      <div style="border:2px dashed #2d2d44;border-radius:16px;padding:40px 20px;text-align:center;cursor:pointer;" onclick="document.getElementById('videoUpload').click()">
+        <div style="font-size:40px;margin-bottom:12px;">📹</div>
+        <div style="font-weight:500;margin-bottom:4px;">点击上传参考视频</div>
+        <div style="font-size:12px;color:#94a3b8;">上传一段真人出镜视频，AI将学习你的口型、表情和动作</div>
+        <div style="font-size:12px;margin-top:8px;color:#94a3b8;">支持 MP4, MOV · 最大 200MB</div>
+      </div>
+      <input type="file" id="videoUpload" accept="video/*" style="display:none;" onchange="handleVideoUpload(event)">
+      <div id="uploadInfo" style="display:none;margin-top:16px;">
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);">
+          <span>✅</span><div style="flex:1;"><div style="font-size:14px;font-weight:500;" id="fileName">参考视频.mp4</div><div style="font-size:12px;color:#94a3b8;" id="fileSize">15.2 MB</div></div>
+          <button onclick="document.getElementById('uploadInfo').style.display='none'" style="font-size:12px;color:#94a3b8;background:none;border:none;cursor:pointer;">删除</button>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:16px;">
+        <button onclick="goToStep(4)" style="background:linear-gradient(135deg,#7c3aed,#5b21b6);color:white;border:none;padding:10px 24px;border-radius:12px;font-weight:500;cursor:pointer;font-size:14px;display:flex;align-items:center;gap:8px;">✓ 确认形象，下一步</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel 4: Video Generation -->
+  <div class="panel" id="panel4">
+    <div class="glass-card" style="padding:24px;margin-bottom:24px;">
+      <h3 style="font-weight:700;margin-bottom:16px;">🎬 视频生成</h3>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;">
+        <div style="padding:16px;border-radius:12px;background:rgba(124,58,237,0.05);border:1px solid rgba(124,58,237,0.1);"><div style="font-size:14px;font-weight:500;margin-bottom:4px;">文案</div><div style="font-size:12px;color:#94a3b8;" id="previewScript">尚未输入文案</div></div>
+        <div style="padding:16px;border-radius:12px;background:rgba(245,158,11,0.05);border:1px solid rgba(245,158,11,0.1);"><div style="font-size:14px;font-weight:500;margin-bottom:4px;">配音</div><div style="font-size:12px;color:#94a3b8;" id="previewVoice">男声温暖 · 1.0x</div></div>
+        <div style="padding:16px;border-radius:12px;background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.1);"><div style="font-size:14px;font-weight:500;margin-bottom:4px;">数字人</div><div style="font-size:12px;color:#94a3b8;" id="previewAvatar">商务男士</div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(15,15,26,0.6);border-radius:16px;padding:60px 20px;">
+        <div id="generateReady" style="text-align:center;">
+          <div style="font-size:64px;margin-bottom:16px;">🎬</div>
+          <div style="font-size:18px;font-weight:700;margin-bottom:8px;">准备生成视频</div>
+          <div style="font-size:14px;margin-bottom:24px;color:#94a3b8;">点击下方按钮，AI将为你生成完整的数字人口播视频</div>
+          <button onclick="generateVideo()" style="background:linear-gradient(135deg,#7c3aed,#5b21b6);color:white;border:none;padding:16px 40px;border-radius:12px;font-weight:500;cursor:pointer;font-size:18px;display:flex;align-items:center;gap:12px;">🎬 开始生成视频</button>
+        </div>
+        <div id="generatingProgress" style="display:none;text-align:center;width:100%;max-width:400px;">
+          <div style="font-size:48px;margin-bottom:16px;">⏳</div>
+          <div style="font-size:18px;font-weight:700;margin-bottom:8px;">正在生成视频...</div>
+          <div style="font-size:14px;margin-bottom:16px;color:#94a3b8;" id="genStatus">正在合成数字人口型...</div>
+          <div style="width:100%;background:#2d2d44;border-radius:10px;height:8px;overflow:hidden;">
+            <div id="genProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#7c3aed,#f59e0b);border-radius:10px;transition:width 0.5s;"></div>
+          </div>
+          <div style="font-size:12px;margin-top:8px;color:#94a3b8;" id="genPercent">0%</div>
+        </div>
+        <div id="generateComplete" style="display:none;text-align:center;">
+          <div style="font-size:64px;margin-bottom:16px;">✅</div>
+          <div style="font-size:18px;font-weight:700;margin-bottom:8px;">视频生成完成！</div>
+          <div style="font-size:14px;margin-bottom:16px;color:#94a3b8;">视频已准备就绪，可以进行后期编辑或直接发布</div>
+          <div style="display:flex;gap:12px;justify-content:center;">
+            <button onclick="showToast('预览视频','info')" style="background:linear-gradient(135deg,#7c3aed,#5b21b6);color:white;border:none;padding:10px 20px;border-radius:12px;font-weight:500;cursor:pointer;">▶ 预览视频</button>
+            <button onclick="showToast('视频已下载','success')" style="background:rgba(124,58,237,0.1);color:#a78bfa;border:1px solid rgba(124,58,237,0.3);padding:10px 20px;border-radius:12px;font-weight:500;cursor:pointer;">⬇ 下载视频</button>
+            <button onclick="goToStep(5)" style="background:transparent;color:#94a3b8;border:1px solid #2d2d44;padding:10px 20px;border-radius:12px;font-weight:500;cursor:pointer;">✂️ 后期编辑</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel 5: Edit -->
+  <div class="panel" id="panel5">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+      <div class="glass-card" style="padding:24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <h3 style="font-weight:700;">✂️ 添加字幕</h3>
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;"><input type="checkbox" id="subtitleToggle" checked style="width:16px;height:16px;accent-color:#7c3aed;"> 启用字幕</label>
+        </div>
+        <div style="margin-bottom:16px;">
+          <label style="font-size:14px;font-weight:500;color:#94a3b8;display:block;margin-bottom:8px;">字幕样式</label>
+          <select id="subtitleStyle" style="background:rgba(15,15,26,0.6);border:1px solid #2d2d44;border-radius:12px;padding:12px 16px;color:#f1f5f9;width:100%;cursor:pointer;font-size:14px;outline:none;">
+            <option value="modern" selected>现代渐变</option>
+            <option value="classic">经典白字黑边</option>
+            <option value="minimal">极简风格</option>
+          </select>
+        </div>
+      </div>
+      <div class="glass-card" style="padding:24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <h3 style="font-weight:700;">🎵 背景音乐</h3>
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;"><input type="checkbox" id="musicToggle" checked style="width:16px;height:16px;accent-color:#7c3aed;"> 启用音乐</label>
+        </div>
+        <div style="margin-bottom:16px;">
+          <label style="font-size:14px;font-weight:500;color:#94a3b8;display:block;margin-bottom:8px;">音乐风格</label>
+          <select id="musicStyle" style="background:rgba(15,15,26,0.6);border:1px solid #2d2d44;border-radius:12px;padding:12px 16px;color:#f1f5f9;width:100%;cursor:pointer;font-size:14px;outline:none;">
+            <option value="uplifting" selected>积极向上</option>
+            <option value="calm">舒缓平静</option>
+            <option value="inspiring">激励人心</option>
+            <option value="warm">温暖治愈</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:14px;font-weight:500;color:#94a3b8;display:block;margin-bottom:8px;">音量 <span id="musicVolume">30%</span></label>
+          <input type="range" style="-webkit-appearance:none;width:100%;height:4px;border-radius:2px;background:#2d2d44;outline:none;" min="0" max="100" value="30" oninput="document.getElementById('musicVolume').textContent=this.value+'%'">
+        </div>
+      </div>
+    </div>
+    <div class="glass-card" style="padding:24px;margin-top:24px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div><h3 style="font-weight:700;">🖼️ 生成封面</h3><div style="font-size:12px;color:#94a3b8;">AI自动生成视频封面图</div></div>
+        <button onclick="generateCover()" style="background:linear-gradient(135deg,#7c3aed,#5b21b6);color:white;border:none;padding:10px 24px;border-radius:12px;font-weight:500;cursor:pointer;font-size:14px;display:flex;align-items:center;gap:8px;">🎨 AI生成封面</button>
+      </div>
+      <div id="coverPreview" style="display:none;margin-top:16px;">
+        <div style="width:200px;height:360px;border-radius:12px;background:linear-gradient(135deg,#7c3aed,#1e1b4b);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;text-align:center;padding:20px;margin:0 auto;">
+          <div><div>🔥</div><div style="font-size:14px;margin-top:8px;" id="coverTitle">AI工具推荐</div><div style="font-size:12px;margin-top:4px;opacity:0.7;">口播智能体</div></div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:16px;">
+        <button onclick="goToStep(6)" style="background:linear-gradient(135deg,#7c3aed,#5b21b6);color:white;border:none;padding:10px 24px;border-radius:12px;font-weight:500;cursor:pointer;font-size:14px;display:flex;align-items:center;gap:8px;">🚀 去发布</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel 6: Publish -->
+  <div class="panel" id="panel6">
+    <div class="glass-card" style="padding:24px;margin-bottom:24px;">
+      <h3 style="font-weight:700;margin-bottom:16px;">🏷️ 标题与标签</h3>
+      <div style="margin-bottom:16px;">
+        <label style="font-size:14px;font-weight:500;color:#94a3b8;display:block;margin-bottom:8px;">视频标题</label>
+        <input id="videoTitle" style="background:rgba(15,15,26,0.6);border:1px solid #2d2d44;border-radius:12px;padding:12px 16px;color:#f1f5f9;width:100%;outline:none;font-size:14px;" value="颠覆认知！这个AI工具让我1小时做出50个口播视频">
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="font-size:14px;font-weight:500;color:#94a3b8;display:block;margin-bottom:8px;">话题标签</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;" id="tagContainer">
+          <span style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:500;background:rgba(124,58,237,0.1);color:#a78bfa;border:1px solid rgba(124,58,237,0.2);">#AI工具 <span style="cursor:pointer;opacity:0.6;" onclick="this.parentElement.remove()">×</span></span>
+          <span style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:500;background:rgba(124,58,237,0.1);color:#a78bfa;border:1px solid rgba(124,58,237,0.2);">#口播 <span style="cursor:pointer;opacity:0.6;" onclick="this.parentElement.remove()">×</span></span>
+          <span style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:500;background:rgba(124,58,237,0.1);color:#a78bfa;border:1px solid rgba(124,58,237,0.2);">#数字人 <span style="cursor:pointer;opacity:0.6;" onclick="this.parentElement.remove()">×</span></span>
+          <span style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:500;background:rgba(124,58,237,0.1);color:#a78bfa;border:1px solid rgba(124,58,237,0.2);">#效率神器 <span style="cursor:pointer;opacity:0.6;" onclick="this.parentElement.remove()">×</span></span>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <input id="tagInput" style="background:rgba(15,15,26,0.6);border:1px solid #2d2d44;border-radius:12px;padding:12px 16px;color:#f1f5f9;flex:1;outline:none;font-size:14px;" placeholder="输入标签后按回车..." onkeydown="if(event.key=='Enter')addTag()">
+          <button onclick="addTag()" style="background:rgba(124,58,237,0.1);color:#a78bfa;border:1px solid rgba(124,58,237,0.3);padding:10px 20px;border-radius:12px;font-weight:500;cursor:pointer;font-size:14px;">添加</button>
+          <button onclick="generateTags()" style="background:linear-gradient(135deg,#7c3aed,#5b21b6);color:white;border:none;padding:10px 20px;border-radius:12px;font-weight:500;cursor:pointer;font-size:14px;">✨ AI生成标签</button>
+        </div>
+      </div>
+    </div>
+    <div class="glass-card" style="padding:24px;margin-bottom:24px;">
+      <h3 style="font-weight:700;margin-bottom:16px;">📤 发布平台</h3>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <label style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;background:rgba(15,15,26,0.4);border:1px solid #2d2d44;cursor:pointer;"><input type="checkbox" checked style="width:16px;height:16px;accent-color:#7c3aed;"> <span style="font-size:20px;">🎵</span> <div><div style="font-size:14px;font-weight:500;">抖音</div><div style="font-size:12px;color:#94a3b8;">国内最大短视频平台</div></div></label>
+        <label style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;background:rgba(15,15,26,0.4);border:1px solid #2d2d44;cursor:pointer;"><input type="checkbox" checked style="width:16px;height:16px;accent-color:#7c3aed;"> <span style="font-size:20px;">📺</span> <div><div style="font-size:14px;font-weight:500;">快手</div><div style="font-size:12px;color:#94a3b8;">覆盖下沉市场</div></div></label>
+        <label style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;background:rgba(15,15,26,0.4);border:1px solid #2d2d44;cursor:pointer;"><input type="checkbox" style="width:16px;height:16px;accent-color:#7c3aed;"> <span style="font-size:20px;">📱</span> <div><div style="font-size:14px;font-weight:500;">微信视频号</div><div style="font-size:12px;color:#94a3b8;">微信生态触达</div></div></label>
+        <label style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;background:rgba(15,15,26,0.4);border:1px solid #2d2d44;cursor:pointer;"><input type="checkbox" style="width:16px;height:16px;accent-color:#7c3aed;"> <span style="font-size:20px;">📹</span> <div><div style="font-size:14px;font-weight:500;">小红书</div><div style="font-size:12px;color:#94a3b8;">种草社区</div></div></label>
+      </div>
+    </div>
+    <div class="glass-card" style="padding:24px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div><h3 style="font-weight:700;">🚀 一键发布</h3><div style="font-size:12px;color:#94a3b8;">确认无误后，一键发布到所选平台</div></div>
+        <button onclick="publishVideo()" style="background:linear-gradient(135deg,#7c3aed,#5b21b6);color:white;border:none;padding:12px 32px;border-radius:12px;font-weight:500;cursor:pointer;font-size:16px;display:flex;align-items:center;gap:12px;">🚀 一键发布</button>
+      </div>
+      <div id="publishProgress" style="display:none;margin-top:16px;">
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);margin-bottom:8px;">
+          <span class="loading-spinner"></span><div style="flex:1;"><div style="font-size:14px;font-weight:500;">抖音</div><div style="font-size:12px;color:#94a3b8;" id="pubDouyinStatus">发布中...</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:rgba(15,15,26,0.4);border:1px solid #2d2d44;" id="pubKuaishouBox">
+          <span class="loading-spinner" style="display:none;" id="pubKsSpinner"></span>
+          <div style="flex:1;"><div style="font-size:14px;font-weight:500;">快手</div><div style="font-size:12px;color:#94a3b8;" id="pubKuaishouStatus">等待中...</div></div>
+        </div>
+      </div>
+      <div id="publishComplete" style="display:none;margin-top:16px;text-align:center;padding:24px;border-radius:12px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);">
+        <div style="font-size:48px;margin-bottom:12px;">🎉</div>
+        <div style="font-size:18px;font-weight:700;margin-bottom:8px;">发布成功！</div>
+        <div style="font-size:14px;color:#94a3b8;">视频已成功发布到所选平台，快去查看吧！</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+var currentStep = 0;
+var avatarIdx = 0;
+var scriptConfirmed = false;
+var voiceGenerated = false;
+var videoGenerated = false;
+var coverGenerated = false;
+var published = false;
+function showToast(msg, type) {
+  var t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast show " + (type || "info");
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function() { t.classList.remove("show"); }, 3000);
+}
+function goToStep(n) {
+  document.querySelectorAll(".panel").forEach(function(p) { p.classList.remove("active"); });
+  document.getElementById("panel" + n).classList.add("active");
+  document.querySelectorAll(".nav-btn").forEach(function(b, i) {
+    if (i === n) { b.style.background = "rgba(124,58,237,0.15)"; b.style.color = "#a78bfa"; }
+    else { b.style.background = "transparent"; b.style.color = "#94a3b8"; }
+  });
+  document.querySelectorAll(".step-dot").forEach(function(d, i) {
+    d.classList.toggle("active", i === n);
+    if (i < n) { d.classList.add("done"); d.classList.remove("active"); } else { d.classList.remove("done"); }
+  });
+  document.querySelectorAll(".step-line").forEach(function(l, i) {
+    if (i < n) l.classList.add("done"); else l.classList.remove("done");
+  });
+  currentStep = n;
+  updateProgress();
+}
+document.querySelectorAll(".nav-btn").forEach(function(btn) {
+  btn.addEventListener("click", function() { goToStep(parseInt(btn.getAttribute("data-step"))); });
+});
+document.querySelectorAll(".step-dot").forEach(function(dot) {
+  dot.addEventListener("click", function() { goToStep(parseInt(dot.getAttribute("data-step"))); });
+});
+function updateProgress() {
+  var steps = [scriptConfirmed, voiceGenerated, true, videoGenerated, coverGenerated, published];
+  var done = steps.filter(function(s) { return s; }).length;
+  document.getElementById("progressPercent").textContent = Math.round((done / 6) * 100) + "%";
+  var ss = ["⏳ 待处理","⏳ 待处理","⏳ 待处理","⏳ 待处理","⏳ 待处理","⏳ 待处理"];
+  if (scriptConfirmed) ss[0] = "✅ 已完成";
+  if (voiceGenerated) ss[1] = "✅ 已完成";
+  ss[2] = "✅ 已选择";
+  if (videoGenerated) ss[3] = "✅ 已完成";
+  if (coverGenerated) ss[4] = "✅ 已完成";
+  if (published) ss[5] = "✅ 已发布";
+  document.getElementById("s1").textContent = ss[0];
+  document.getElementById("s2").textContent = ss[1];
+  document.getElementById("s3").textContent = ss[2];
+  document.getElementById("s4").textContent = ss[3];
+}
+document.getElementById("scriptInput").addEventListener("input", function() {
+  document.getElementById("charCount").textContent = this.value.length;
+});
+function clearScript() { document.getElementById("scriptInput").value = ""; document.getElementById("charCount").textContent = "0"; }
+function extractScript() {
+  var url = prompt("请输入抖音/小红书等视频链接：");
+  if (url) { showToast("正在提取文案...", "info");
+    setTimeout(function() {
+      document.getElementById("scriptInput").value = "大家好，今天我要跟大家分享一个超级好用的AI工具——口播智能体！\n\n很多朋友问我，做口播视频是不是一定要自己出镜？是不是一定要会剪辑？其实完全不需要！\n\n今天这个工具，只需要三步：\n第一步，准备好你的文案；\n第二步，选择一个数字人形象；\n第三步，一键生成视频！\n\n就是这么简单！";
+      document.getElementById("charCount").textContent = document.getElementById("scriptInput").value.length;
+      showToast("文案提取成功！", "success");
+    }, 1500);
+  }
+}
+function rewriteScript() {
+  var input = document.getElementById("scriptInput").value.trim();
+  if (!input) { showToast("请先输入文案！", "error"); return; }
+  showToast("AI正在优化文案...", "info");
+  setTimeout(function() {
+    document.getElementById("rewrittenOutput").value = "🔥 今天必须安利一个宝藏工具！\n\n做口播视频还在为出镜发愁吗？还在为剪辑头疼吗？\n\n今天我发现的这个口播智能体，真的绝了！\n\n只需要三步，你也能轻松做出专业级的口播视频👇\n\n第一步：准备好你的文案（或者直接用AI生成）\n第二步：选一个你喜欢的数字人形象\n第三步：一键生成，AI搞定配音、字幕、配乐\n\n就这么简单！\n\n效率直接拉满，1小时出50个视频不是梦！";
+    showToast("文案改写完成！", "success");
+  }, 2000);
+}
+function clearRewrite() { document.getElementById("rewrittenOutput").value = ""; }
+function copyScript() {
+  var t = document.getElementById("rewrittenOutput").value;
+  if (!t) { showToast("请先生成改写文案！", "error"); return; }
+  if (navigator.clipboard) { navigator.clipboard.writeText(t).then(function() { showToast("已复制到剪贴板！", "success"); }); }
+}
+function confirmScript() {
+  var t = document.getElementById("rewrittenOutput").value;
+  if (!t) { showToast("请先进行AI改写！", "error"); return; }
+  scriptConfirmed = true;
+  document.getElementById("previewScript").textContent = t.substring(0, 50) + "...";
+  showToast("文案已确认！", "success");
+  updateProgress();
+}
+function generateVoice() {
+  document.getElementById("voiceLoading").style.display = "flex";
+  document.getElementById("voiceResult").style.display = "none";
+  setTimeout(function() {
+    document.getElementById("voiceLoading").style.display = "none";
+    document.getElementById("voiceResult").style.display = "block";
+    voiceGenerated = true;
+    var v = document.getElementById("voiceSelect");
+    var s = document.getElementById("speedValue").textContent;
+    document.getElementById("previewVoice").textContent = v.options[v.selectedIndex].text.split(" - ")[1] + " · " + s;
+    showToast("配音生成成功！", "success");
+    updateProgress();
+  }, 3000);
+}
+function selectAvatar(el, idx) {
+  document.querySelectorAll(".avatar-card").forEach(function(c) { c.classList.remove("selected"); c.style.borderColor = "#2d2d44"; c.style.background = "#1a1a2e"; });
+  el.classList.add("selected");
+  el.style.borderColor = "#7c3aed";
+  el.style.background = "rgba(124,58,237,0.1)";
+  avatarIdx = idx;
+  var names = ["商务男士","职业女性","潮流达人","知性讲师","科技博主"];
+  document.getElementById("previewAvatar").textContent = names[idx];
+  showToast("已选择：" + names[idx], "success");
+}
+function handleVideoUpload(e) {
+  var f = e.target.files[0];
+  if (!f) return;
+  document.getElementById("fileName").textContent = f.name;
+  document.getElementById("fileSize").textContent = (f.size / 1024 / 1024).toFixed(1) + " MB";
+  document.getElementById("uploadInfo").style.display = "block";
+  showToast("视频上传成功！", "success");
+}
+function generateVideo() {
+  document.getElementById("generateReady").style.display = "none";
+  document.getElementById("generatingProgress").style.display = "block";
+  var pct = 0;
+  var statuses = ["正在分析文案结构...","正在合成数字人口型...","正在同步音频与唇形...","正在渲染视频画面...","正在优化视频质量...","即将完成..."];
+  var iv = setInterval(function() {
+    pct += Math.random() * 8 + 2;
+    if (pct > 100) pct = 100;
+    document.getElementById("genProgressBar").style.width = pct + "%";
+    document.getElementById("genPercent").textContent = Math.round(pct) + "%";
+    document.getElementById("genStatus").textContent = statuses[Math.min(Math.floor(pct / 17), statuses.length - 1)];
+    if (pct >= 100) {
+      clearInterval(iv);
+      setTimeout(function() {
+        document.getElementById("generatingProgress").style.display = "none";
+        document.getElementById("generateComplete").style.display = "block";
+        videoGenerated = true;
+        showToast("视频生成完成！", "success");
+        updateProgress();
+      }, 500);
+    }
+  }, 600);
+}
+
+function addTag() {
+  var inp = document.getElementById("tagInput");
+  var val = inp.value.trim();
+  if (!val) return;
+  var span = document.createElement("span");
+  span.style.cssText = "display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:500;background:rgba(124,58,237,0.1);color:#a78bfa;border:1px solid rgba(124,58,237,0.2);";
+  var rem = document.createElement("span");
+  rem.textContent = "\u00d7";
+  rem.style.cssText = "cursor:pointer;opacity:0.6;";
+  rem.onclick = function() { span.remove(); };
+  span.textContent = "#" + val + " ";
+  span.appendChild(rem);
+  document.getElementById("tagContainer").appendChild(span);
+  inp.value = "";
+}
+function generateTags() {
+  showToast("AI正在生成热门标签...", "info");
+  setTimeout(function() {
+    var tags = ["#AI\u5de5\u5177","#\u53e3\u64ad","#\u6570\u5b57\u4eba","#\u6548\u7387\u795e\u5668","#\u81ea\u5a92\u4f53","#\u77ed\u89c6\u9891","#AI\u521b\u4f5c","#\u9ed1\u79d1\u6280"];
+    var c = document.getElementById("tagContainer");
+    c.innerHTML = "";
+    tags.forEach(function(tag) {
+      var span = document.createElement("span");
+      span.style.cssText = "display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:500;background:rgba(124,58,237,0.1);color:#a78bfa;border:1px solid rgba(124,58,237,0.2);";
+      var rem = document.createElement("span");
+      rem.textContent = "\u00d7";
+      rem.style.cssText = "cursor:pointer;opacity:0.6;";
+      rem.onclick = function() { span.remove(); };
+      span.textContent = tag + " ";
+      span.appendChild(rem);
+      c.appendChild(span);
+    });
+    showToast("\u6807\u7b7e\u751f\u6210\u5b8c\u6210\uff01", "success");
+  }, 1500);
+}
+
+function publishVideo() {
+  if (!videoGenerated) { showToast("请先生成视频！", "error"); return; }
+  document.getElementById("publishProgress").style.display = "block";
+  document.getElementById("publishComplete").style.display = "none";
+  setTimeout(function() {
+    var ksBox = document.getElementById("pubKuaishouBox");
+    if (ksBox) {
+      ksBox.style.borderColor = "rgba(16,185,129,0.2)";
+      ksBox.style.background = "rgba(16,185,129,0.1)";
+    }
+    document.getElementById("pubKuaishouStatus").textContent = "发布中...";
+    setTimeout(function() {
+      document.getElementById("pubKuaishouStatus").textContent = "发布成功！";
+    }, 3000);
+  }, 3000);
+  setTimeout(function() {
+    published = true;
+    document.getElementById("publishComplete").style.display = "block";
+    showToast("全部发布成功！", "success");
+    updateProgress();
+  }, 8000);
+}
+function saveProject() { showToast("项目已保存到本地", "success"); }
+function startPipeline() { showToast("开始全流程创作！", "info"); goToStep(1); }
+</script>
+</div>
+</body>
+</html>
